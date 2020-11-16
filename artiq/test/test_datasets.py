@@ -3,6 +3,9 @@
 import copy
 import unittest
 
+import h5py
+import numpy as np
+
 from sipyco.sync_struct import process_mod
 
 from artiq.experiment import EnvExperiment
@@ -14,7 +17,7 @@ class MockDatasetDB:
         self.data = dict()
 
     def get(self, key):
-        return self.data[key][1]
+        return self.data[key]["value"]
 
     def update(self, mod):
         # Copy mod before applying to avoid sharing references to objects
@@ -82,9 +85,9 @@ class ExperimentDatasetCase(unittest.TestCase):
     def test_append_broadcast(self):
         self.exp.set(KEY, [], broadcast=True)
         self.exp.append(KEY, 0)
-        self.assertEqual(self.dataset_db.data[KEY][1], [0])
+        self.assertEqual(self.dataset_db.data[KEY]["value"], [0])
         self.exp.append(KEY, 1)
-        self.assertEqual(self.dataset_db.data[KEY][1], [0, 1])
+        self.assertEqual(self.dataset_db.data[KEY]["value"], [0, 1])
 
     def test_append_array(self):
         for broadcast in (True, False):
@@ -103,3 +106,17 @@ class ExperimentDatasetCase(unittest.TestCase):
         with self.assertRaises(KeyError):
             self.exp.append(KEY, 0)
 
+    def test_allow_compression(self):
+        data = np.random.random_sample(1024)
+        self.exp.set("should_be_compressed", data, allow_compression=True)
+        self.exp.set("dont_compress", data)
+        self.exp.set("too_small_to_compress", np.arange(10), allow_compression=True)
+        self.exp.set("not_an_array", 42, allow_compression=True)
+
+        with h5py.File("test.h5", "a", "core", backing_store=False) as f:
+            self.dataset_mgr.write_hdf5(f)
+
+            self.assertIsNotNone(f["datasets"]["should_be_compressed"].compression)
+            self.assertIsNone(f["datasets"]["dont_compress"].compression)
+            self.assertIsNone(f["datasets"]["too_small_to_compress"].compression)
+            self.assertIsNone(f["datasets"]["not_an_array"].compression)

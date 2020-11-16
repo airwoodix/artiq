@@ -42,10 +42,19 @@ class DatasetDB(TaskObject):
             file_data = pyon.load_file(self.persist_file)
         except FileNotFoundError:
             file_data = dict()
-        self.data = Notifier({k: (True, v) for k, v in file_data.items()})
+        self.data = Notifier(
+            {
+                k: {"persist": True, "value": v["value"], "compress": v["compress"]}
+                for k, v in file_data.items()
+            }
+        )
 
     def save(self):
-        data = {k: v[1] for k, v in self.data.raw_view.items() if v[0]}
+        data = {
+            k: {"value": d["value"], "compress": d["compress"]}
+            for k, d in self.data.raw_view.items()
+            if d["persist"]
+        }
         pyon.store_file(self.persist_file, data)
 
     async def _do(self):
@@ -57,19 +66,23 @@ class DatasetDB(TaskObject):
             self.save()
 
     def get(self, key):
-        return self.data.raw_view[key][1]
+        return self.data.raw_view[key]
 
     def update(self, mod):
         process_mod(self.data, mod)
 
     # convenience functions (update() can be used instead)
-    def set(self, key, value, persist=None):
+    def set(self, key, value, persist=None, allow_compression=False):
         if persist is None:
             if key in self.data.raw_view:
-                persist = self.data.raw_view[key][0]
+                persist = self.data.raw_view[key]["persist"]
             else:
                 persist = False
-        self.data[key] = (persist, value)
+        self.data[key] = {
+            "persist": persist,
+            "value": value,
+            "compress": allow_compression,
+        }
 
     def delete(self, key):
         del self.data[key]
