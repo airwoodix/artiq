@@ -207,4 +207,4 @@ def _write(group, k, v):
 
     except TypeError as e:
         raise TypeError("Error writing dataset '{}' of type '{}': {}".format(
-            k, type(v), e))
+            k, type(v["value"]), e))

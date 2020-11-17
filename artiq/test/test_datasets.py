@@ -120,3 +120,14 @@ class ExperimentDatasetCase(unittest.TestCase):
             self.assertIsNone(f["datasets"]["dont_compress"].compression)
             self.assertIsNone(f["datasets"]["too_small_to_compress"].compression)
             self.assertIsNone(f["datasets"]["not_an_array"].compression)
+
+    def test_write_hdf5_invalid_type(self):
+        class CustomType:
+            def __init__(self, x):
+                self.x = x
+
+        self.exp.set(KEY, CustomType(42))
+
+        with h5py.File("test.h5", "w", "core", backing_store=False) as f:
+            with self.assertRaisesRegex(TypeError, "CustomType"):
+                self.dataset_mgr.write_hdf5(f)
