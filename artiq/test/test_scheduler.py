@@ -291,8 +291,11 @@ class SchedulerCase(unittest.TestCase):
             nonlocal termination_ok
             self.assertEqual(
                 mod,
-                {"action": "setitem", "key": "termination_ok",
-                 "value": (False, True), "path": []})
+                {"action": "setitem",
+                 "key": "termination_ok",
+                 "value": {"persist": False, "value": True, "compress": False},
+                 "path": []}
+            )
             termination_ok = True
         handlers = {
             "update_dataset": check_termination
