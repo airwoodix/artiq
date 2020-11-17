@@ -37,7 +37,12 @@ Highlights:
    - A "Quick Open" dialog to open experiments by typing part of their name can
      be brought up Ctrl-P (Ctrl+Return to immediately submit the selected entry
      with the default arguments).
+   - The dataset panel now shows the compression hint for each dataset (see below).
 * Experiment results are now always saved to HDF5, even if run() fails.
+* NumPy array datasets can now be marked for transparent gzip compression in the
+  HDF5 archive through ``allow_compression=True`` in ``set_dataset``. Compression
+  effectively is used only for arrays with size > 300. Persistent datasets keep
+  track of their compression hint.
 * Core device: ``panic_reset 1`` now correctly resets the kernel CPU as well if
   communication CPU panic occurs.
 * NumberValue accepts a ``type`` parameter specifying the output as ``int`` or ``float``
@@ -54,6 +59,8 @@ Breaking changes:
   thin veneer around lists. Most prior use cases of NumPy arrays in kernels should work
   unchanged with the new implementation, but the behavior might differ slightly in some
   cases (for instance, non-rectangular arrays are not currently supported).
+* The dataset persistence file format (by default dataset_db.pyon) was changed to support
+  tracking dataset attributes, like e.g. the compression hint.
 
 
 ARTIQ-5

@@ -345,8 +345,11 @@ class HasEnvironment:
         :param archive: the data is saved into the local storage of the current
             run (archived as a HDF5 file).
         :param save: deprecated.
-        :param allow_compression: the data is allowed to be compressed in HDF5
-            archive for the current run.
+        :param allow_compression: the data is allowed to be transparently
+            compressed in the HDF5 archive for the current run. Even if this
+            parameter is set to `True`, compression is only used if the dataset
+            is a NumPy array of size > 300. Persistent datasets keep track of
+            this hint.
         """
         if save is not None:
             warnings.warn("set_dataset save parameter is deprecated, "
