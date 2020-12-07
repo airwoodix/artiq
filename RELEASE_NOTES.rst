@@ -37,12 +37,11 @@ Highlights:
    - A "Quick Open" dialog to open experiments by typing part of their name can
      be brought up Ctrl-P (Ctrl+Return to immediately submit the selected entry
      with the default arguments).
-   - The dataset panel now shows the compression hint for each dataset (see below).
+   - The dataset panel now shows the HDF5 filters applied on each dataset (if any).
 * Experiment results are now always saved to HDF5, even if run() fails.
-* NumPy array datasets can now be marked for transparent gzip compression in the
-  HDF5 archive through ``allow_compression=True`` in ``set_dataset``. Compression
-  effectively is used only for arrays with size > 300. Persistent datasets keep
-  track of their compression hint.
+* HDF5 options can now be passed when creating datasets with `set_dataset`. This allows
+  in particular to use transparent compression filters as follows:
+  `set_dataset(name, value, compression="gzip")`.
 * Core device: ``panic_reset 1`` now correctly resets the kernel CPU as well if
   communication CPU panic occurs.
 * NumberValue accepts a ``type`` parameter specifying the output as ``int`` or ``float``

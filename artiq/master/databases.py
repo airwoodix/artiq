@@ -44,14 +44,18 @@ class DatasetDB(TaskObject):
             file_data = dict()
         self.data = Notifier(
             {
-                k: {"persist": True, "value": v["value"], "compress": v["compress"]}
+                k: {
+                    "persist": True,
+                    "value": v["value"],
+                    "hdf5_options": v["hdf5_options"]
+                }
                 for k, v in file_data.items()
             }
         )
 
     def save(self):
         data = {
-            k: {"value": d["value"], "compress": d["compress"]}
+            k: {"value": d["value"], "hdf5_options": d["hdf5_options"]}
             for k, d in self.data.raw_view.items()
             if d["persist"]
         }
@@ -72,7 +76,7 @@ class DatasetDB(TaskObject):
         process_mod(self.data, mod)
 
     # convenience functions (update() can be used instead)
-    def set(self, key, value, persist=None, allow_compression=False):
+    def set(self, key, value, persist=None, **hdf5_options):
         if persist is None:
             if key in self.data.raw_view:
                 persist = self.data.raw_view[key]["persist"]
@@ -81,7 +85,7 @@ class DatasetDB(TaskObject):
         self.data[key] = {
             "persist": persist,
             "value": value,
-            "compress": allow_compression,
+            "hdf5_options": hdf5_options or None,
         }
 
     def delete(self, key):

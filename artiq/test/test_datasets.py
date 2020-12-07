@@ -106,20 +106,20 @@ class ExperimentDatasetCase(unittest.TestCase):
         with self.assertRaises(KeyError):
             self.exp.append(KEY, 0)
 
-    def test_allow_compression(self):
-        data = np.random.random_sample(1024)
-        self.exp.set("should_be_compressed", data, allow_compression=True)
-        self.exp.set("dont_compress", data)
-        self.exp.set("too_small_to_compress", np.arange(10), allow_compression=True)
-        self.exp.set("not_an_array", 42, allow_compression=True)
+    def test_hdf5_options(self):
+        data = np.random.randint(0, 1024, 1024)
+        self.exp.set(KEY, data,
+                     compression="gzip", compression_opts=6,
+                     shuffle=True, fletcher32=True)
 
         with h5py.File("test.h5", "a", "core", backing_store=False) as f:
             self.dataset_mgr.write_hdf5(f)
 
-            self.assertIsNotNone(f["datasets"]["should_be_compressed"].compression)
-            self.assertIsNone(f["datasets"]["dont_compress"].compression)
-            self.assertIsNone(f["datasets"]["too_small_to_compress"].compression)
-            self.assertIsNone(f["datasets"]["not_an_array"].compression)
+            self.assertTrue(np.array_equal(f["datasets"][KEY][()], data))
+            self.assertEqual(f["datasets"][KEY].compression, "gzip")
+            self.assertEqual(f["datasets"][KEY].compression_opts, 6)
+            self.assertTrue(f["datasets"][KEY].shuffle)
+            self.assertTrue(f["datasets"][KEY].fletcher32)
 
     def test_write_hdf5_invalid_type(self):
         class CustomType:

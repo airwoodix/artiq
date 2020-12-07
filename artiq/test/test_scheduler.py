@@ -293,7 +293,11 @@ class SchedulerCase(unittest.TestCase):
                 mod,
                 {"action": "setitem",
                  "key": "termination_ok",
-                 "value": {"persist": False, "value": True, "compress": False},
+                 "value": {
+                     "persist": False,
+                     "value": True,
+                     "hdf5_options": None
+                 },
                  "path": []}
             )
             termination_ok = True

@@ -85,14 +85,25 @@ class StringEditor(Editor):
 class Model(DictSyncTreeSepModel):
     def __init__(self, init):
         DictSyncTreeSepModel.__init__(
-            self, ".", ["Dataset", "Persistent", "Compression allowed", "Value"], init
+            self, ".", ["Dataset", "Persistent", "HDF5 filters", "Value"], init
         )
 
     def convert(self, k, v, column):
         if column == 1:
             return "Y" if v["persist"] else "N"
         elif column == 2:
-            return "Y" if v["compress"] else "N"
+            o = v["hdf5_options"]
+            c_level = o.get("compression_opts")
+            c_level = f":{c_level}" if c_level is not None else ""
+            values = [
+                "fletcher32" if o.get("fletcher32") else None,
+                f"{o.get('compression')}{c_level}"
+                if o.get("compression") is not None else None,
+                "shuffle" if o.get("shuffle") else None,
+                f"scaleoffset:{o.get('scaleoffset')}"
+                if o.get("scaleoffset") is not None else None,
+            ]
+            return " | ".join(v for v in values if v is not None)
         elif column == 3:
             return short_format(v["value"])
         else:

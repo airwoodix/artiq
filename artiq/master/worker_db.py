@@ -118,7 +118,7 @@ class DatasetManager:
         self._broadcaster.publish = ddb.update
 
     def set(self, key, value, broadcast=False, persist=False, archive=True,
-            allow_compression=False):
+            hdf5_options=None):
         if key in self.archive:
             logger.warning("Modifying dataset '%s' which is in archive, "
                            "archive will remain untouched",
@@ -131,7 +131,7 @@ class DatasetManager:
             self._broadcaster[key] = {
                 "persist": persist,
                 "value": value,
-                "compress": allow_compression,
+                "hdf5_options": hdf5_options,
             }
         elif key in self._broadcaster.raw_view:
             del self._broadcaster[key]
@@ -140,7 +140,7 @@ class DatasetManager:
             self.local[key] = {
                 "persist": persist,
                 "value": value,
-                "compress": allow_compression,
+                "hdf5_options": hdf5_options,
             }
         elif key in self.local:
             del self.local[key]
@@ -193,18 +193,7 @@ def _write(group, k, v):
     # Add context to exception message when the user writes a dataset that is
     # not representable in HDF5.
     try:
-        # when allowed, only compress "large" numpy arrays
-        if (
-            v["compress"]
-            and isinstance(v["value"], np.ndarray)
-            and v["value"].size > 300
-        ):
-            group.create_dataset(
-                k, data=v["value"], compression="gzip", compression_opts=9
-            )
-        else:
-            group[k] = v["value"]
-
+        group.create_dataset(k, data=v["value"], **(v["hdf5_options"] or {}))
     except TypeError as e:
         raise TypeError("Error writing dataset '{}' of type '{}': {}".format(
             k, type(v["value"]), e))
