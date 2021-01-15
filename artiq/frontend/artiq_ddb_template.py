@@ -257,8 +257,8 @@ class PeripheralManager:
             self.gen("""
                 device_db["{name}_ch{mchn}"] = {{
                     "type": "local",
-                    "module": "artiq.coredevice.adf5355",
-                    "class": "ADF5355",
+                    "module": "artiq.coredevice.adf5356",
+                    "class": "ADF5356",
                     "arguments": {{
                         "channel": {mchn},
                         "sw_device": "ttl_{name}_sw{mchn}",
@@ -273,9 +273,15 @@ class PeripheralManager:
                 "type": "local",
                 "module": "artiq.coredevice.mirny",
                 "class": "Mirny",
-                "arguments": {{"spi_device": "spi_{name}"}},
+                "arguments": {{
+                    "spi_device": "spi_{name}",
+                    "refclk": {refclk},
+                    "clk_sel": {clk_sel}
+                }},
             }}""",
-            name=mirny_name)
+            name=mirny_name,
+            refclk=peripheral.get("refclk", 100e6),
+            clk_sel=peripheral.get("clk_sel", 0))
 
         return next(channel)
 
@@ -498,7 +504,7 @@ class PeripheralManager:
             }}""",
             name=self.get_name("phaser"),
             channel=rtio_offset)
-        return 2
+        return 5
 
     def process(self, rtio_offset, peripheral):
         processor = getattr(self, "process_"+str(peripheral["type"]))

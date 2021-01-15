@@ -192,6 +192,8 @@ class SatelliteBase(MiniSoC):
 # JESD204 DAC Channel Group
 class JDCGSAWG(Module, AutoCSR):
     def __init__(self, platform, sys_crg, jesd_crg, dac):
+        # Kintex Ultrascale GTH, speed grade -1C:
+        # CPLL linerate (D=1): 4.0 - 8.5 Gb/s
         self.submodules.jesd = jesd204_tools.UltrascaleTX(
             platform, sys_crg, jesd_crg, dac)
 
@@ -416,7 +418,7 @@ def main():
     parser.add_argument("-V", "--variant", default="satellite",
         help="variant: satellite/simplesatellite "
              "(default: %(default)s)")
-    parser.add_argument("--sfp", default=False,
+    parser.add_argument("--sfp", default=False, action="store_true",
         help="use SFP port for DRTIO instead of uTCA backplane")
     parser.add_argument("--rtm-csr-csv",
         default=os.path.join("artiq_sayma", "rtm_gateware", "rtm_csr.csv"),

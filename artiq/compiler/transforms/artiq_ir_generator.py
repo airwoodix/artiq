@@ -390,6 +390,14 @@ class ARTIQIRGenerator(algorithm.Visitor):
     def visit_AugAssign(self, node):
         lhs = self.visit(node.target)
         rhs = self.visit(node.value)
+
+        if builtins.is_array(lhs.type):
+            name = type(node.op).__name__
+            def make_op(l, r):
+                return self.append(ir.Arith(node.op, l, r))
+            self._broadcast_binop(name, make_op, lhs.type, lhs, rhs, assign_to_lhs=True)
+            return
+
         value = self.append(ir.Arith(node.op, lhs, rhs))
         try:
             self.current_assign = value
@@ -851,34 +859,23 @@ class ARTIQIRGenerator(algorithm.Visitor):
 
         cleanup = []
         for item_node in node.items:
+            # user-defined context manager
             context_expr_node  = item_node.context_expr
             optional_vars_node = item_node.optional_vars
+            context_mgr = self.visit(context_expr_node)
+            enter_fn    = self.append(ir.GetAttr(context_mgr, '__enter__'))
+            exit_fn     = self.append(ir.GetAttr(context_mgr, '__exit__'))
 
-            if isinstance(context_expr_node, asttyped.CallT) and \
-                    types.is_builtin(context_expr_node.func.type, "watchdog"):
-                timeout        = self.visit(context_expr_node.args[0])
-                timeout_ms     = self.append(ir.Arith(ast.Mult(loc=None), timeout,
-                                                      ir.Constant(1000, builtins.TFloat())))
-                timeout_ms_int = self.append(ir.Coerce(timeout_ms, builtins.TInt64()))
+            try:
+                self.current_assign = self._user_call(enter_fn, [], {})
+                if optional_vars_node is not None:
+                    self.visit(optional_vars_node)
+            finally:
+                self.current_assign = None
 
-                watchdog_id = self.append(ir.Builtin("watchdog_set", [timeout_ms_int],
-                                                     builtins.TInt32()))
-                cleanup.append(lambda:
-                    self.append(ir.Builtin("watchdog_clear", [watchdog_id], builtins.TNone())))
-            else: # user-defined context manager
-                context_mgr = self.visit(context_expr_node)
-                enter_fn    = self.append(ir.GetAttr(context_mgr, '__enter__'))
-                exit_fn     = self.append(ir.GetAttr(context_mgr, '__exit__'))
-
-                try:
-                    self.current_assign = self._user_call(enter_fn, [], {})
-                    if optional_vars_node is not None:
-                        self.visit(optional_vars_node)
-                finally:
-                    self.current_assign = None
-
-                none = self.append(ir.Alloc([], builtins.TNone()))
-                cleanup.append(lambda fn=exit_fn: self._user_call(fn, [none, none, none], {}))
+            none = self.append(ir.Alloc([], builtins.TNone()))
+            cleanup.append(lambda:
+                self._user_call(exit_fn, [none, none, none], {}))
 
         self._try_finally(
             body_gen=lambda: self.visit(node.body),
@@ -1606,7 +1603,7 @@ class ARTIQIRGenerator(algorithm.Visitor):
                 num_rows, num_summands, _, num_cols = self._get_matmult_shapes(lhs, rhs)
 
                 elt = result.type["elt"].find()
-                env_type = ir.TEnvironment("loop", {"$total": elt})
+                env_type = ir.TEnvironment(name + ".loop", {"$total": elt})
                 env = self.append(ir.Alloc([], env_type))
 
                 def row_loop(row_idx):
@@ -1726,7 +1723,7 @@ class ARTIQIRGenerator(algorithm.Visitor):
             return self.append(ir.Alloc([result_buffer, shape], node.type))
         return self.append(ir.GetElem(result_buffer, ir.Constant(0, self._size_type)))
 
-    def _broadcast_binop(self, name, make_op, result_type, lhs, rhs):
+    def _broadcast_binop(self, name, make_op, result_type, lhs, rhs, assign_to_lhs):
         # Broadcast scalars (broadcasting higher dimensions is not yet allowed in the
         # language).
         broadcast = False
@@ -1747,9 +1744,11 @@ class ARTIQIRGenerator(algorithm.Visitor):
                     builtins.TException("ValueError"),
                     ir.Constant("operands could not be broadcast together",
                                 builtins.TStr())))
-
-        elt = result_type.find()["elt"]
-        result, _ = self._allocate_new_array(elt, shape)
+        if assign_to_lhs:
+            result = lhs
+        else:
+            elt = result_type.find()["elt"]
+            result, _ = self._allocate_new_array(elt, shape)
         func = self._get_array_elementwise_binop(name, make_op, result_type, lhs.type,
             rhs.type)
         self._invoke_arrayop(func, [result, lhs, rhs])
@@ -1764,7 +1763,8 @@ class ARTIQIRGenerator(algorithm.Visitor):
             name = type(node.op).__name__
             def make_op(l, r):
                 return self.append(ir.Arith(node.op, l, r))
-            return self._broadcast_binop(name, make_op, node.type, lhs, rhs)
+            return self._broadcast_binop(name, make_op, node.type, lhs, rhs,
+                                         assign_to_lhs=False)
         elif builtins.is_numeric(node.type):
             lhs = self.visit(node.left)
             rhs = self.visit(node.right)
@@ -2457,7 +2457,8 @@ class ARTIQIRGenerator(algorithm.Visitor):
                 self._invoke_arrayop(func, [result, args[0]])
                 insn = result
             elif len(args) == 2:
-                insn = self._broadcast_binop(name, make_call, node.type, *args)
+                insn = self._broadcast_binop(name, make_call, node.type, *args,
+                                             assign_to_lhs=False)
             else:
                 assert False, "Broadcasting for {} arguments not implemented".format(len)
         else:

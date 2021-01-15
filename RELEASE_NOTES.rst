@@ -60,6 +60,7 @@ Breaking changes:
   cases (for instance, non-rectangular arrays are not currently supported).
 * The dataset persistence file format (by default dataset_db.pyon) was changed to support
   tracking dataset attributes, like e.g. the compression hint.
+* ``quamash`` has been replaced with ``qasync``.
 
 
 ARTIQ-5
