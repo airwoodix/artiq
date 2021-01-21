@@ -59,7 +59,8 @@ Breaking changes:
   unchanged with the new implementation, but the behavior might differ slightly in some
   cases (for instance, non-rectangular arrays are not currently supported).
 * The dataset persistence file format (by default dataset_db.pyon) was changed to support
-  tracking dataset attributes, like e.g. the compression hint.
+  tracking dataset attributes. Datasets are now represented by a dictionary with keys
+  ``persist``, ``value``, and ``hdf5_options``.
 * ``quamash`` has been replaced with ``qasync``.
 
 
