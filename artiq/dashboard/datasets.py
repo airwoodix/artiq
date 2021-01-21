@@ -92,7 +92,7 @@ class Model(DictSyncTreeSepModel):
         if column == 1:
             return "Y" if v["persist"] else "N"
         elif column == 2:
-            o = v["hdf5_options"]
+            o = v["hdf5_options"] or {}
             c_level = o.get("compression_opts")
             c_level = f":{c_level}" if c_level is not None else ""
             values = [
