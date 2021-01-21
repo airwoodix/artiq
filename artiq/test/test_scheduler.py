@@ -7,6 +7,7 @@ from time import time, sleep
 
 from artiq.experiment import *
 from artiq.master.scheduler import Scheduler
+from artiq.master.databases import make_dataset
 
 
 class EmptyExperiment(EnvExperiment):
@@ -291,14 +292,12 @@ class SchedulerCase(unittest.TestCase):
             nonlocal termination_ok
             self.assertEqual(
                 mod,
-                {"action": "setitem",
-                 "key": "termination_ok",
-                 "value": {
-                     "persist": False,
-                     "value": True,
-                     "hdf5_options": None
-                 },
-                 "path": []}
+                {
+                    "action": "setitem",
+                    "key": "termination_ok",
+                    "value": make_dataset(value=True),
+                    "path": []
+                }
             )
             termination_ok = True
         handlers = {

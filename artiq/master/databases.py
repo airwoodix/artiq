@@ -33,6 +33,14 @@ class DeviceDB:
         return desc
 
 
+def make_dataset(*, persist=False, value=None, hdf5_options=None):
+    "PYON-serializable representation of a dataset in the DatasetDB"
+    return {
+        "persist": persist,
+        "value": value,
+        "hdf5_options": hdf5_options or None,
+    }
+
 class DatasetDB(TaskObject):
     def __init__(self, persist_file, autosave_period=30):
         self.persist_file = persist_file
@@ -44,18 +52,18 @@ class DatasetDB(TaskObject):
             file_data = dict()
         self.data = Notifier(
             {
-                k: {
-                    "persist": True,
-                    "value": v["value"],
-                    "hdf5_options": v["hdf5_options"]
-                }
+                k: make_dataset(
+                    persist=True,
+                    value=v["value"],
+                    hdf5_options=v["hdf5_options"]
+                )
                 for k, v in file_data.items()
             }
         )
 
     def save(self):
         data = {
-            k: {"value": d["value"], "hdf5_options": d["hdf5_options"]}
+            k: d
             for k, d in self.data.raw_view.items()
             if d["persist"]
         }
@@ -79,15 +87,14 @@ class DatasetDB(TaskObject):
     def set(self, key, value, persist=None, **hdf5_options):
         if persist is None:
             if key in self.data.raw_view:
-                persist = self.data.raw_view[key]["persist"]
+                persist = self.data.raw_view[key].persist
             else:
                 persist = False
-        self.data[key] = {
-            "persist": persist,
-            "value": value,
-            "hdf5_options": hdf5_options or None,
-        }
+        self.data[key] = make_dataset(
+            persist=persist,
+            value=value,
+            hdf5_options=hdf5_options,
+        )
 
     def delete(self, key):
         del self.data[key]
-    #

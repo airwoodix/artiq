@@ -13,6 +13,7 @@ import numpy as np
 from sipyco.sync_struct import Notifier
 from sipyco.pc_rpc import AutoTarget, Client, BestEffortClient
 
+from artiq.master.databases import make_dataset
 
 logger = logging.getLogger(__name__)
 
@@ -128,20 +129,20 @@ class DatasetManager:
             broadcast = True
 
         if broadcast:
-            self._broadcaster[key] = {
-                "persist": persist,
-                "value": value,
-                "hdf5_options": hdf5_options,
-            }
+            self._broadcaster[key] = make_dataset(
+                persist=persist,
+                value=value,
+                hdf5_options=hdf5_options,
+            )
         elif key in self._broadcaster.raw_view:
             del self._broadcaster[key]
 
         if archive:
-            self.local[key] = {
-                "persist": persist,
-                "value": value,
-                "hdf5_options": hdf5_options,
-            }
+            self.local[key] = make_dataset(
+                persist=persist,
+                value=value,
+                hdf5_options=hdf5_options,
+            )
         elif key in self.local:
             del self.local[key]
 
